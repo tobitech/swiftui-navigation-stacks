@@ -20,10 +20,10 @@ public final class ItemModel: Equatable, Identifiable, ObservableObject {
     self.destination = destination
     self.item = item
   }
-
-  func setColorPickerNavigation(isActive: Bool) {
-    self.destination = isActive ? .colorPicker : nil
-  }
+	
+	func colorPickerButtonTapped() {
+		self.destination = .colorPicker
+	}
 
   public static func == (lhs: ItemModel, rhs: ItemModel) -> Bool {
     lhs === rhs
@@ -36,32 +36,49 @@ public struct ItemView: View {
   public init(model: ItemModel) {
     self.model = model
   }
-
-  public var body: some View {
+	
+	public var body: some View {
     Form {
       TextField("Name", text: self.$model.item.name)
+			
+			Button(action: {
+				self.model.colorPickerButtonTapped()
+			}, label: {
+				HStack {
+					Text("Color")
+					Spacer()
+					if let color = self.model.item.color {
+						Rectangle()
+							.frame(width: 30, height: 30)
+							.foregroundColor(color.swiftUIColor)
+							.border(Color.black, width: 1)
+					}
+					Text(self.model.item.color?.name ?? "None")
+						.foregroundColor(.gray)
+				}
+			})
 
-      NavigationLink(
-        unwrapping: self.$model.destination,
-        case: /ItemModel.Destination.colorPicker
-      ) { isActive in
-        self.model.setColorPickerNavigation(isActive: isActive)
-      } destination: { _ in 
-        ColorPickerView(color: self.$model.item.color)
-      } label: {
-        HStack {
-          Text("Color")
-          Spacer()
-          if let color = self.model.item.color {
-            Rectangle()
-              .frame(width: 30, height: 30)
-              .foregroundColor(color.swiftUIColor)
-              .border(Color.black, width: 1)
-          }
-          Text(self.model.item.color?.name ?? "None")
-            .foregroundColor(.gray)
-        }
-      }
+//      NavigationLink(
+//        unwrapping: self.$model.destination,
+//        case: /ItemModel.Destination.colorPicker
+//      ) { isActive in
+//        self.model.setColorPickerNavigation(isActive: isActive)
+//      } destination: { _ in
+//        ColorPickerView(color: self.$model.item.color)
+//      } label: {
+//        HStack {
+//          Text("Color")
+//          Spacer()
+//          if let color = self.model.item.color {
+//            Rectangle()
+//              .frame(width: 30, height: 30)
+//              .foregroundColor(color.swiftUIColor)
+//              .border(Color.black, width: 1)
+//          }
+//          Text(self.model.item.color?.name ?? "None")
+//            .foregroundColor(.gray)
+//        }
+//      }
 
       Switch(self.$model.item.status) {
         CaseLet(/Item.Status.inStock) { $quantity in
@@ -86,6 +103,12 @@ public struct ItemView: View {
         }
       }
     }
+		.navigationDestination(
+			unwrapping: self.$model.destination,
+			case: /ItemModel.Destination.colorPicker,
+			destination: { _ in
+				ColorPickerView(color: self.$model.item.color)
+			})
   }
 }
 
