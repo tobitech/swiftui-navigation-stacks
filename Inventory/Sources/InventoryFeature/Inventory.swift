@@ -119,41 +119,30 @@ public struct InventoryView: View {
         }
       }
 			.navigationDestination(
-				isPresented: .init(
-					get: {
-						guard case .some(.edit) = self.model.destination else { return false }
-						return true
-					},
-					set: { isActive in
-						if !isActive {
-							self.model.deactivateEdit()
-						}
-					}
-				),
-				destination: {
-					if case let .some(.edit(itemModel)) = self.model.destination {
-						ItemView(model: itemModel)
-							.navigationBarTitle("Edit")
-							.navigationBarBackButtonHidden(true)
-							.toolbar {
-								ToolbarItem(placement: .cancellationAction) {
-									Button("Cancel") {
-										self.model.cancelEditButtonTapped()
-									}
-								}
-								ToolbarItem(placement: .primaryAction) {
-									HStack {
-										if self.model.isSaving {
-											ProgressView()
-										}
-										Button("Save") {
-											Task { await self.model.commitEdit() }
-										}
-									}
-									.disabled(self.model.isSaving)
+				unwrapping: self.$model.destination,
+				case: /InventoryModel.Destination.edit,
+				destination: { $itemModel in
+					ItemView(model: itemModel)
+						.navigationBarTitle("Edit")
+						.navigationBarBackButtonHidden(true)
+						.toolbar {
+							ToolbarItem(placement: .cancellationAction) {
+								Button("Cancel") {
+									self.model.cancelEditButtonTapped()
 								}
 							}
-					}
+							ToolbarItem(placement: .primaryAction) {
+								HStack {
+									if self.model.isSaving {
+										ProgressView()
+									}
+									Button("Save") {
+										Task { await self.model.commitEdit() }
+									}
+								}
+								.disabled(self.model.isSaving)
+							}
+						}
 				}
 			)
 //			.background {
