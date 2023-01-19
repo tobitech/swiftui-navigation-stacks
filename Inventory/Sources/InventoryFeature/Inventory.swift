@@ -7,61 +7,92 @@ import SwiftUI
 import SwiftUINavigation
 
 public final class InventoryModel: ObservableObject {
-  @Published public var destination: Destination?
-  @Published public var inventory: IdentifiedArrayOf<ItemRowModel> {
-    didSet { self.bind() }
-  }
-
-  public enum Destination: Equatable {
-    case add(ItemModel)
+	@Published public var destination: Destination?
+	@Published public var inventory: IdentifiedArrayOf<ItemRowModel> {
+		didSet { self.bind() }
+	}
+	
+	@Published var isSaving = false
+	
+	public enum Destination: Equatable {
+		case add(ItemModel)
 		case edit(ItemModel)
-    case help
-  }
+		case help
+	}
+	
+	public init(
+		destination: Destination? = nil,
+		inventory: IdentifiedArrayOf<ItemRowModel> = []
+	) {
+		self.destination = destination
+		self.inventory = inventory
+		self.bind()
+	}
+	
+	private func bind() {
+		for itemRowModel in self.inventory {
+			itemRowModel.commitDeletion = { [weak self, itemID = itemRowModel.item.id] in
+				withAnimation {
+					_ = self?.inventory.remove(id: itemID)
+				}
+			}
+			itemRowModel.commitDuplication = { [weak self] item in
+				self?.confirmAdd(item: item)
+			}
+			itemRowModel.onTap = { [weak self, weak itemRowModel] in
+				guard let self, let itemRowModel else { return  }
+				self.destination = .edit(ItemModel(item: itemRowModel.item))
+			}
+		}
+	}
+	
+	func confirmAdd(item: Item) {
+		withAnimation {
+			self.inventory.append(ItemRowModel(item: item))
+			self.destination = nil
+		}
+	}
+	
+	func addButtonTapped() {
+		self.destination = .add(
+			ItemModel(
+				item: Item(name: "", color: nil, status: .inStock(quantity: 1))
+			)
+		)
+	}
+	
+	func cancelAddButtonTapped() {
+		self.destination = nil
+	}
+	
+	func helpButtonTapped() {
+		self.destination = .help
+	}
+	
+	func deactivateEdit() {
+		self.destination = nil
+	}
+	
+	func cancelEditButtonTapped() {
+		self.destination = nil
+	}
+	
+	@MainActor
+	func commitEdit() async {
+		guard case let .some(.edit(itemModel)) = self.destination
+		else { return } // TODO: precondition?
 
-  public init(
-    destination: Destination? = nil,
-    inventory: IdentifiedArrayOf<ItemRowModel> = []
-  ) {
-    self.destination = destination
-    self.inventory = inventory
-    self.bind()
-  }
+		self.isSaving = true
+		defer { self.isSaving = false }
 
-  private func bind() {
-    for itemRowModel in self.inventory {
-      itemRowModel.commitDeletion = { [weak self, itemID = itemRowModel.item.id] in
-        withAnimation {
-          _ = self?.inventory.remove(id: itemID)
-        }
-      }
-      itemRowModel.commitDuplication = { [weak self] item in
-        self?.confirmAdd(item: item)
-      }
-    }
-  }
+		do {
+			// NB: Emulate an API request
+			try await Task.sleep(nanoseconds: NSEC_PER_SEC)
+		} catch {}
 
-  func confirmAdd(item: Item) {
-    withAnimation {
-      self.inventory.append(ItemRowModel(item: item))
-      self.destination = nil
-    }
-  }
-
-  func addButtonTapped() {
-    self.destination = .add(
-      ItemModel(
-        item: Item(name: "", color: nil, status: .inStock(quantity: 1))
-      )
-    )
-  }
-
-  func cancelAddButtonTapped() {
-    self.destination = nil
-  }
-
-  func helpButtonTapped() {
-    self.destination = .help
-  }
+		self.inventory[id: itemModel.id]?.item = itemModel.item
+		self.destination = nil
+	}
 }
 
 public struct InventoryView: View {
@@ -87,6 +118,39 @@ public struct InventoryView: View {
           Button("Help") { self.model.helpButtonTapped() }
         }
       }
+			.background {
+				NavigationLink(
+					unwrapping: self.$model.destination,
+					case: /InventoryModel.Destination.edit) { isActive in
+						self.model.deactivateEdit()
+					} destination: { $itemModel in
+						ItemView(model: itemModel)
+							.navigationBarTitle("Edit")
+							.navigationBarBackButtonHidden(true)
+							.toolbar {
+								ToolbarItem(placement: .cancellationAction) {
+									Button("Cancel") {
+										self.model.cancelEditButtonTapped()
+									}
+								}
+								ToolbarItem(placement: .primaryAction) {
+									HStack {
+										if self.model.isSaving {
+											ProgressView()
+										}
+										Button("Save") {
+											Task { await self.model.commitEdit() }
+										}
+									}
+									.disabled(self.model.isSaving)
+								}
+							}
+					} label: {
+						EmptyView()
+					}
+					.hidden()
+					.accessibility(hidden: true)
+			}
       .navigationTitle("Inventory")
       .sheet(
         unwrapping: self.$model.destination,

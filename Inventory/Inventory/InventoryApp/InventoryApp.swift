@@ -29,19 +29,28 @@ struct NestedView: View {
 	}
 }
 
+let lastItem = Item(
+	name: "Headphones",
+	color: .red,
+	status: .outOfStock(isOnBackOrder: false)
+)
+
 @main
 struct InventoryApp: App {
   let model = AppModel(
     inventoryModel: InventoryModel(
-      destination: .add(
-        ItemModel(
-          destination: .colorPicker,
-          item: Item(
-            name: "Ergnomic Keyboard",
-            status: .inStock(quantity: 100)
-          )
-        )
-      ),
+//			destination: .edit(
+//				ItemModel(item: lastItem)
+//			),
+//      destination: .add(
+//        ItemModel(
+//          destination: .colorPicker,
+//          item: Item(
+//            name: "Ergnomic Keyboard",
+//            status: .inStock(quantity: 100)
+//          )
+//        )
+//      ),
       inventory: [
         ItemRowModel(
           item: Item(name: "Keyboard", color: .blue, status: .inStock(quantity: 100))
