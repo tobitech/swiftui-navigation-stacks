@@ -5,6 +5,30 @@ import ItemRowFeature
 import Models
 import SwiftUI
 
+// An observable object that recursively holds onto an optional value of itself
+class NestedModel: ObservableObject {
+	@Published var child: NestedModel?
+	init(child: NestedModel? = nil) {
+		self.child = child
+	}
+}
+
+struct NestedView: View {
+	@ObservedObject var model: NestedModel
+
+	var body: some View {
+		NavigationLink(
+			unwrapping: self.$model.child
+		) { isActive in
+			self.model.child = isActive ? NestedModel() : nil
+		} destination: { $child in
+			NestedView(model: child)
+		} label: {
+			Text("Go to child feature")
+		}
+	}
+}
+
 @main
 struct InventoryApp: App {
   let model = AppModel(

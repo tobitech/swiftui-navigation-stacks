@@ -13,11 +13,12 @@ public final class ItemRowModel: Hashable, Identifiable, ObservableObject {
   public enum Destination: Equatable {
     case deleteConfirmationAlert
     case duplicate(ItemModel)
-    case edit(ItemModel)
+    // case edit(ItemModel)
   }
 
   public var commitDeletion: () -> Void = unimplemented("ItemRowModel.commitDeletion")
   public var commitDuplication: (Item) -> Void = unimplemented("ItemRowModel.commitDuplication")
+	public var onTap : () -> Void = unimplemented("ItemRowModel.onTap")
 
   public var id: Item.ID { self.item.id }
 
@@ -48,27 +49,31 @@ public final class ItemRowModel: Hashable, Identifiable, ObservableObject {
     self.commitDuplication(itemModel.item)
     self.destination = nil
   }
+	
+	func rowTapped() {
+		self.onTap()
+	}
 
-  public func setEditNavigation(isActive: Bool) {
-    self.destination = isActive ? .edit(ItemModel(item: self.item)) : nil
-  }
+//  public func setEditNavigation(isActive: Bool) {
+//    self.destination = isActive ? .edit(ItemModel(item: self.item)) : nil
+//  }
 
-  @MainActor
-  func commitEdit() async {
-    guard case let .some(.edit(itemModel)) = self.destination
-    else { return } // TODO: precondition?
-
-    self.isSaving = true
-    defer { self.isSaving = false }
-
-    do {
-      // NB: Emulate an API request
-      try await Task.sleep(nanoseconds: NSEC_PER_SEC)
-    } catch {}
-
-    self.item = itemModel.item
-    self.destination = nil
-  }
+//  @MainActor
+//  func commitEdit() async {
+//    guard case let .some(.edit(itemModel)) = self.destination
+//    else { return } // TODO: precondition?
+//
+//    self.isSaving = true
+//    defer { self.isSaving = false }
+//
+//    do {
+//      // NB: Emulate an API request
+//      try await Task.sleep(nanoseconds: NSEC_PER_SEC)
+//    } catch {}
+//
+//    self.item = itemModel.item
+//    self.destination = nil
+//  }
 
   public func cancelButtonTapped() {
     self.destination = nil
@@ -97,68 +102,73 @@ public struct ItemRowView: View {
   }
 
   public var body: some View {
-    NavigationLink(
-      unwrapping: self.$model.destination,
-      case: /ItemRowModel.Destination.edit
-    ) { isActive in
-      self.model.setEditNavigation(isActive: isActive)
-    } destination: { $itemModel in
-      ItemView(model: itemModel)
-        .navigationBarTitle("Edit")
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button("Cancel") {
-              self.model.cancelButtonTapped()
-            }
-          }
-          ToolbarItem(placement: .primaryAction) {
-            HStack {
-              if self.model.isSaving {
-                ProgressView()
-              }
-              Button("Save") {
-                Task { await self.model.commitEdit() }
-              }
-            }
-            .disabled(self.model.isSaving)
-          }
-        }
-    } label: {
-      HStack {
-        VStack(alignment: .leading) {
-          Text(self.model.item.name)
+		Button(action: {
+			self.model.rowTapped()
+		}, label: {
+			HStack {
+				VStack(alignment: .leading) {
+					Text(self.model.item.name)
 
-          switch self.model.item.status {
-          case let .inStock(quantity):
-            Text("In stock: \(quantity)")
-          case let .outOfStock(isOnBackOrder):
-            Text("Out of stock" + (isOnBackOrder ? ": on back order" : ""))
-          }
-        }
+					switch self.model.item.status {
+					case let .inStock(quantity):
+						Text("In stock: \(quantity)")
+					case let .outOfStock(isOnBackOrder):
+						Text("Out of stock" + (isOnBackOrder ? ": on back order" : ""))
+					}
+				}
 
-        Spacer()
+				Spacer()
 
-        if let color = self.model.item.color {
-          Rectangle()
-            .frame(width: 30, height: 30)
-            .foregroundColor(color.swiftUIColor)
-            .border(Color.black, width: 1)
-        }
+				if let color = self.model.item.color {
+					Rectangle()
+						.frame(width: 30, height: 30)
+						.foregroundColor(color.swiftUIColor)
+						.border(Color.black, width: 1)
+				}
 
-        Button(action: { self.model.duplicateButtonTapped() }) {
-          Image(systemName: "square.fill.on.square.fill")
-        }
-        .padding(.leading)
+				Button(action: { self.model.duplicateButtonTapped() }) {
+					Image(systemName: "square.fill.on.square.fill")
+				}
+				.padding(.leading)
 
-        Button(action: { self.model.deleteButtonTapped() }) {
-          Image(systemName: "trash.fill")
-        }
-        .padding(.leading)
-      }
-      .buttonStyle(.plain)
-      .foregroundColor(self.model.item.status.isInStock ? nil : Color.gray)
-    }
+				Button(action: { self.model.deleteButtonTapped() }) {
+					Image(systemName: "trash.fill")
+				}
+				.padding(.leading)
+			}
+			.buttonStyle(.plain)
+			.foregroundColor(self.model.item.status.isInStock ? nil : Color.gray)
+		})
+//    NavigationLink(
+//      unwrapping: self.$model.destination,
+//      case: /ItemRowModel.Destination.edit
+//    ) { isActive in
+//      self.model.setEditNavigation(isActive: isActive)
+//    } destination: { $itemModel in
+//      ItemView(model: itemModel)
+//        .navigationBarTitle("Edit")
+//        .navigationBarBackButtonHidden(true)
+//        .toolbar {
+//          ToolbarItem(placement: .cancellationAction) {
+//            Button("Cancel") {
+//              self.model.cancelButtonTapped()
+//            }
+//          }
+//          ToolbarItem(placement: .primaryAction) {
+//            HStack {
+//              if self.model.isSaving {
+//                ProgressView()
+//              }
+//              Button("Save") {
+//                Task { await self.model.commitEdit() }
+//              }
+//            }
+//            .disabled(self.model.isSaving)
+//          }
+//        }
+//    } label: {
+//
+//    }
     .alert(
       title: { _ in Text(self.model.item.name) },
       unwrapping: self.$model.destination,

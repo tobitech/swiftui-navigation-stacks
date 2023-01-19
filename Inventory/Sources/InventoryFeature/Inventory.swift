@@ -14,6 +14,7 @@ public final class InventoryModel: ObservableObject {
 
   public enum Destination: Equatable {
     case add(ItemModel)
+		case edit(ItemModel)
     case help
   }
 

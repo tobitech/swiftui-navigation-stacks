@@ -26,16 +26,13 @@ class ItemRowFeatureTests: XCTestCase {
 
   func testEdit() {
     let model = ItemRowModel(item: .headphones)
-
-    model.setEditNavigation(isActive: true)
-    XCTAssertNotNil(model.destination)
-    XCTAssertEqual(
-      (/ItemRowModel.Destination.edit).extract(from: try XCTUnwrap(model.destination))?.item,
-      .headphones
-    )
-
-    model.setEditNavigation(isActive: false)
-    XCTAssertNil(model.destination)
+		let expectation = self.expectation(description: "onTap")
+		model.onTap = {
+			expectation.fulfill()
+		}
+		
+    model.rowTapped()
+		self.wait(for: [expectation], timeout: 0) // using zero timeout because we expect it to be instant.
   }
 
   func testDuplicate() throws {
