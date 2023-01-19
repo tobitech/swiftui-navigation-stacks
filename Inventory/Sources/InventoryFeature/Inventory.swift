@@ -103,7 +103,7 @@ public struct InventoryView: View {
   }
 
   public var body: some View {
-    NavigationView {
+    NavigationStack {
       List {
         ForEach(
           self.model.inventory,
@@ -118,12 +118,20 @@ public struct InventoryView: View {
           Button("Help") { self.model.helpButtonTapped() }
         }
       }
-			.background {
-				NavigationLink(
-					unwrapping: self.$model.destination,
-					case: /InventoryModel.Destination.edit) { isActive in
-						self.model.deactivateEdit()
-					} destination: { $itemModel in
+			.navigationDestination(
+				isPresented: .init(
+					get: {
+						guard case .some(.edit) = self.model.destination else { return false }
+						return true
+					},
+					set: { isActive in
+						if !isActive {
+							self.model.deactivateEdit()
+						}
+					}
+				),
+				destination: {
+					if case let .some(.edit(itemModel)) = self.model.destination {
 						ItemView(model: itemModel)
 							.navigationBarTitle("Edit")
 							.navigationBarBackButtonHidden(true)
@@ -145,12 +153,42 @@ public struct InventoryView: View {
 									.disabled(self.model.isSaving)
 								}
 							}
-					} label: {
-						EmptyView()
 					}
-					.hidden()
-					.accessibility(hidden: true)
-			}
+				}
+			)
+//			.background {
+//				NavigationLink(
+//					unwrapping: self.$model.destination,
+//					case: /InventoryModel.Destination.edit) { isActive in
+//						self.model.deactivateEdit()
+//					} destination: { $itemModel in
+//						ItemView(model: itemModel)
+//							.navigationBarTitle("Edit")
+//							.navigationBarBackButtonHidden(true)
+//							.toolbar {
+//								ToolbarItem(placement: .cancellationAction) {
+//									Button("Cancel") {
+//										self.model.cancelEditButtonTapped()
+//									}
+//								}
+//								ToolbarItem(placement: .primaryAction) {
+//									HStack {
+//										if self.model.isSaving {
+//											ProgressView()
+//										}
+//										Button("Save") {
+//											Task { await self.model.commitEdit() }
+//										}
+//									}
+//									.disabled(self.model.isSaving)
+//								}
+//							}
+//					} label: {
+//						EmptyView()
+//					}
+//					.hidden()
+//					.accessibility(hidden: true)
+//			}
       .navigationTitle("Inventory")
       .sheet(
         unwrapping: self.$model.destination,
