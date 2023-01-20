@@ -39,9 +39,9 @@ let lastItem = Item(
 struct InventoryApp: App {
   let model = AppModel(
     inventoryModel: InventoryModel(
-//			destination: .edit(
-//				ItemModel(item: lastItem)
-//			),
+			destination: .edit(
+				ItemModel(item: lastItem)
+			),
 //      destination: .add(
 //        ItemModel(
 //          destination: .colorPicker,
@@ -62,7 +62,7 @@ struct InventoryApp: App {
           item: Item(name: "Phone", color: .green, status: .outOfStock(isOnBackOrder: true))
         ),
         ItemRowModel(
-          item: Item(name: "Headphones", color: .red, status: .outOfStock(isOnBackOrder: false))
+          item: lastItem // Item(name: "Headphones", color: .red, status: .outOfStock(isOnBackOrder: false))
         ),
       ]
     ),
